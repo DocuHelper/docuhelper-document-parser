@@ -1,0 +1,38 @@
+server:
+  port: 8084
+spring:
+  kafka:
+    bootstrap-servers: 192.168.0.5:9092
+    consumer:
+      auto-offset-reset: latest
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+  datasource:
+    url: jdbc:postgresql://192.168.0.7:5432/dev-docuhelper
+    username: postgres
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Spring AI PDF ?? ? AI ?? (??? ??? ??? ?? ??)
+  ai:
+    pdf:
+      enabled: true
+    model:
+      ollama:
+        endpoint: http://192.168.0.8:11434               # Ollama ?? ?????
+    vector-store:
+      pgvector:
+        enabled: true
+        schema: public                                 # ?? ??? ???
+        table: vectors                                 # ?? ?? ????
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.bmserver.docuhelperdocumentparser: DEBUG       # ?????? ???? ?? ??
