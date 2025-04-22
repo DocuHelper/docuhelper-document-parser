@@ -20,16 +20,20 @@ spring:
 
   # Spring AI PDF ?? ? AI ?? (??? ??? ??? ?? ??)
   ai:
+    openai:
+      chat:
+        options:
+          model: gpt-4.1-nano-2025-04-14
+      api-key: ${OPENAI_API_KEY}
     pdf:
       enabled: true
-    model:
-      ollama:
-        endpoint: http://192.168.0.8:11434               # Ollama ?? ?????
-    vector-store:
-      pgvector:
-        enabled: true
-        schema: public                                 # ?? ??? ???
-        table: vectors                                 # ?? ?? ????
+    ollama:
+      base-url: http://192.168.0.8:11434
+#    vector-store:
+#      pgvector:
+#        enabled: true
+#        schema: public                                 # ?? ??? ???
+#        table: vectors                                 # ?? ?? ????
 
 logging:
   level:
