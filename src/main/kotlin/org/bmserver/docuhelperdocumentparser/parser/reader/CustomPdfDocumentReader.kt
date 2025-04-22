@@ -118,13 +118,15 @@ class CustomPdfDocumentReader : DocumentReader {
                 }
 
                 val test_area_string = mergedAreas.map {
-                    val tt = it.mapIndexed { idx, rect ->
+                    it.mapIndexed { idx, rect ->
                         pdfTextStripper.addRegion("region$idx", rect)
                         pdfTextStripper.extractRegions(page)
                         pdfTextStripper.removeRegion("region$idx")
-                        pdfTextStripper.getTextForRegion("region$idx").trim()
+                        pdfTextStripper.getTextForRegion("region$idx")
+                            .trim()
+                            .replace("\u0000", "")
                     }
-                    LinkedList(tt)
+                        .let { LinkedList(it) }
                 }
 
                 val content = mutableListOf<String>()
