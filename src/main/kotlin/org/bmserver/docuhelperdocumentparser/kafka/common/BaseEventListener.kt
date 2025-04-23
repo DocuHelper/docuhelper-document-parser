@@ -1,25 +1,27 @@
 package org.bmserver.docuhelperdocumentparser.kafka.common
 
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.messaging.handler.annotation.Header
 import org.springframework.stereotype.Component
 import java.lang.reflect.ParameterizedType
 
 @Component
-abstract class BaseEventListener<T> {
+abstract class BaseEventListener<T> : CoroutineScope by CoroutineScope(Dispatchers.IO) {
     @Autowired
     private lateinit var om: ObjectMapper
 
     fun listen(event: Map<String, Any>, @Header eventType: String) {
-        if (getEventClass().simpleName != eventType) {
-            return
+        if (getEventClass().simpleName != eventType) return
+        launch {
+            // Map<String, Any> 으로 받아온 뒤, 제네릭 T 타입으로 변환
+            val payload: T = om.convertValue(event, getEventClass())
+
+            handle(payload)
         }
-        // Map<String, Any> 으로 받아온 뒤, 제네릭 T 타입으로 변환
-        val payload: T = om.convertValue(event, getEventClass())
-        handle(payload)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -28,7 +30,6 @@ abstract class BaseEventListener<T> {
         return type as Class<T>
     }
 
-    abstract fun handle(event:T)
+
+    abstract suspend fun handle(event: T)
 }
-
-

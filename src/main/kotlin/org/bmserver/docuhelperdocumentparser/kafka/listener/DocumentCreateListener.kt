@@ -1,8 +1,10 @@
 package org.bmserver.docuhelperdocumentparser.kafka.listener
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.bmserver.docuhelperdocumentparser.ai.AiService
 import org.bmserver.docuhelperdocumentparser.core.chunk.event.DocumentParse
 import org.bmserver.docuhelperdocumentparser.core.chunk.event.DocumentParseComplete
+import org.bmserver.docuhelperdocumentparser.core.chunk.event.DocumentParseFail
 import org.bmserver.docuhelperdocumentparser.core.chunk.event.DocumentParseStart
 import org.bmserver.docuhelperdocumentparser.core.event.DocumentCreate
 import org.bmserver.docuhelperdocumentparser.file.FileService
@@ -16,6 +18,9 @@ import org.springframework.ai.openai.OpenAiChatModel
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.stereotype.Component
 
+
+val logger = KotlinLogging.logger { }
+
 @Component
 class DocumentCreateListener(
     private val parserService: ParserService,
@@ -25,54 +30,78 @@ class DocumentCreateListener(
     private val eventPublisher: EventPublisher,
     private val ollamaApi: OllamaApi
 ) : DocuhelperApiEventListener<DocumentCreate>() {
-    override fun handle(event: DocumentCreate) {
 
-        val document = event.document
-        eventPublisher.publish(DocumentParseStart(document.uuid!!))
+    override fun listen(event: Map<String, Any>, eventType: String) {
+        super.listen(event, eventType)
+    }
 
-        val url = fileService.getFileDownloadURL(document.file)
-        val ts = TokenTextSplitter()
-        val summaryEnricherTemplate = """
+    override suspend fun handle(event: DocumentCreate) {
+        try {
+            logger.info { "Handle DocuhelperApiEventListener - ${event.document.name}" }
+            val document = event.document
+            eventPublisher.publish(DocumentParseStart(document.uuid!!))
+
+            val url = fileService.getFileDownloadURL(document.file)
+            val ts = TokenTextSplitter()
+            val summaryEnricherTemplate = """
         다음은 해당 섹션의 내용입니다:
         {context_str}
 
         위 내용을 바탕으로 핵심 주제와 주요 인물, 장소, 기관 등의 개체를 요약해 주세요.
 
         요약:""".trimIndent()
-        val summaryEnricher = SummaryMetadataEnricher(chatModel, null, summaryEnricherTemplate, MetadataMode.ALL)
+            val summaryEnricher = SummaryMetadataEnricher(chatModel, null, summaryEnricherTemplate, MetadataMode.ALL)
 
-        val documentParseResult = parserService.parseDocument(url)
-            .let { ts.split(it) }
-            .let { summaryEnricher.transform(it) }
+            logger.info { "Start Parsing" }
 
-        val documentEmbedContent = documentParseResult.map { it.text }
-            .map { it ?: "" }
-            .let { aiService.getEmbeddingValue(it) }
+            val documentParseResult = parserService.parseDocument(url)
+                .let {
+                    println("SPLIT DOCUMENT")
+                    ts.split(it)
+                }
+                .let {
+                    println("Summary Document")
+                    summaryEnricher.transform(it)
+                }
 
-        var currentPage = 0
-        var currentChunk = 0
-        documentParseResult.forEachIndexed { index, it ->
-            val page = (it.metadata["page_number"]) as Int
+            logger.info { "Embedding Document" }
+            val documentEmbedContent = documentParseResult.map { it.text }
+                .map { it ?: "" }
+                .let { aiService.getEmbeddingValue(it) }
 
-            if (currentPage != page) {
-                currentPage = page
-                currentChunk = 1
+            logger.info { "Send Event Start" }
+            var currentPage = 0
+            var currentChunk = 0
+            documentParseResult.forEachIndexed { index, it ->
+                val page = (it.metadata["page_number"]) as Int
+
+                if (currentPage != page) {
+                    currentPage = page
+                    currentChunk = 1
+                }
+
+                val parseEvent = DocumentParse(
+                    documentUuid = document.uuid!!,
+                    page = page,
+                    content = it.text ?: "",
+                    embedContent = documentEmbedContent.embeddings[index].toList(),
+                    chunkNum = currentChunk
+                )
+
+                eventPublisher.publish(parseEvent)
+
+                currentChunk++
+                logger.info { "Send Event Page ${currentPage} : Chunk ${currentChunk}" }
             }
 
-            val parseEvent = DocumentParse(
-                documentUuid = document.uuid!!,
-                page = page,
-                content = it.text ?: "",
-                embedContent = documentEmbedContent.embeddings[index].toList(),
-                chunkNum = currentChunk
-            )
+            logger.info { "Send Complete Event" }
+            val parseCompleteEvent = DocumentParseComplete(document.uuid!!)
+            eventPublisher.publish(parseCompleteEvent)
 
-            eventPublisher.publish(parseEvent)
-
-            currentChunk++
+            logger.info { "Document Parse Success" }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            eventPublisher.publish(DocumentParseFail(event.document.uuid!!))
         }
-
-        val parseCompleteEvent = DocumentParseComplete(document.uuid!!)
-        eventPublisher.publish(parseCompleteEvent)
     }
 }
