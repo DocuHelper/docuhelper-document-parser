@@ -1,0 +1,8 @@
+  spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_HOST}:${KAFKA_PORT}
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+    ollama:
+      base-url: ${OLLAMA_ENDPOINT}

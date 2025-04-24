@@ -13,7 +13,6 @@ import org.bmserver.docuhelperdocumentparser.kafka.common.EventPublisher
 import org.bmserver.docuhelperdocumentparser.parser.ParserService
 import org.springframework.ai.chat.transformer.SummaryMetadataEnricher
 import org.springframework.ai.document.MetadataMode
-import org.springframework.ai.ollama.api.OllamaApi
 import org.springframework.ai.openai.OpenAiChatModel
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.stereotype.Component
@@ -28,12 +27,7 @@ class DocumentCreateListener(
     private val aiService: AiService,
     private val chatModel: OpenAiChatModel,
     private val eventPublisher: EventPublisher,
-    private val ollamaApi: OllamaApi
 ) : DocuhelperApiEventListener<DocumentCreate>() {
-
-    override fun listen(event: Map<String, Any>, eventType: String) {
-        super.listen(event, eventType)
-    }
 
     override suspend fun handle(event: DocumentCreate) {
         try {
@@ -52,7 +46,7 @@ class DocumentCreateListener(
         요약:""".trimIndent()
             val summaryEnricher = SummaryMetadataEnricher(chatModel, null, summaryEnricherTemplate, MetadataMode.ALL)
 
-            logger.info { "Start Parsing" }
+            logger.info { "Start Parsing - ${event.document.name}" }
 
             val documentParseResult = parserService.parseDocument(url)
                 .let {
@@ -64,12 +58,12 @@ class DocumentCreateListener(
                     summaryEnricher.transform(it)
                 }
 
-            logger.info { "Embedding Document" }
+            logger.info { "Embedding Document - ${event.document.name}" }
             val documentEmbedContent = documentParseResult.map { it.text }
                 .map { it ?: "" }
                 .let { aiService.getEmbeddingValue(it) }
 
-            logger.info { "Send Event Start" }
+            logger.info { "Send Event Start - ${event.document.name}" }
             var currentPage = 0
             var currentChunk = 0
             documentParseResult.forEachIndexed { index, it ->
@@ -91,16 +85,17 @@ class DocumentCreateListener(
                 eventPublisher.publish(parseEvent)
 
                 currentChunk++
-                logger.info { "Send Event Page ${currentPage} : Chunk ${currentChunk}" }
+                logger.info { "Send Event - ${event.document.name} : Page ${currentPage} : Chunk ${currentChunk}" }
             }
 
-            logger.info { "Send Complete Event" }
+            logger.info { "Send Complete Event - ${event.document.name}" }
             val parseCompleteEvent = DocumentParseComplete(document.uuid!!)
             eventPublisher.publish(parseCompleteEvent)
 
-            logger.info { "Document Parse Success" }
+            logger.info { "Document Parse Success - ${event.document.name}" }
         } catch (e: Exception) {
             e.printStackTrace()
+            logger.error { "Document Parse fail - ${event.document.name}" }
             eventPublisher.publish(DocumentParseFail(event.document.uuid!!))
         }
     }

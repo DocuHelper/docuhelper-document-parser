@@ -1,0 +1,14 @@
+spring:
+  kafka:
+    bootstrap-servers: 192.168.0.5:9092
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+    ollama:
+      base-url: http://192.168.0.8:11434
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.bmserver.docuhelperdocumentparser: DEBUG       # ?????? ???? ?? ??
