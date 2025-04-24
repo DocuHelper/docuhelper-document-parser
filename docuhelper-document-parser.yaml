@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: docuhelper-document-parser-deployment
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docuhelper-document-parser
+  template:
+    metadata:
+      labels:
+        app: docuhelper-document-parser
+    spec:
+      containers:
+        - name: docuhelper-document-parser-container
+          image: docker.bmserver.org/docuhelper-document-parser:$IMAGE_TAG
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8084
+          envFrom:
+            - configMapRef:
+                name: docuhelper-configmap-prod

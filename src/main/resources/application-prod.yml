@@ -1,4 +1,4 @@
-  spring:
+spring:
   kafka:
     bootstrap-servers: ${KAFKA_HOST}:${KAFKA_PORT}
   ai:
@@ -6,3 +6,6 @@
       api-key: ${OPENAI_API_KEY}
     ollama:
       base-url: ${OLLAMA_ENDPOINT}
+docuhelper:
+  file:
+    endpoint: ${DOCUHELPER_FILE_ENDPOINT}
