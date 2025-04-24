@@ -6,7 +6,7 @@ spring:
       api-key: ${OPENAI_API_KEY}
     ollama:
       base-url: http://192.168.0.8:11434
- docuhelper:
+docuhelper:
   file:
     endpoint: http://localhost:8082
 
