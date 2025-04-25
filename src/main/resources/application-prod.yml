@@ -9,3 +9,9 @@ spring:
 docuhelper:
   file:
     endpoint: ${DOCUHELPER_FILE_ENDPOINT}
+
+logging:
+  level:
+    org.bmserver.docuhelperdocumentparser:
+      kafka.listener: INFO
+      parser.ParserService: INFO
