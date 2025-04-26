@@ -3,6 +3,8 @@ package org.bmserver.docuhelperdocumentparser.core.model
 enum class DocumentType(val group: Any?) {
     HTML(null),
     PPT(null),
+    DOC(null),
+    TEXT(null),
     PDF_SINGLE_COLUMN(PDF_Group),
     PDF_MULTI_COLUMN(PDF_Group);
 

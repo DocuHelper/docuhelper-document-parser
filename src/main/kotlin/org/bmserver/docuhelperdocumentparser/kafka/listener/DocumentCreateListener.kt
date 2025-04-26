@@ -32,7 +32,7 @@ class DocumentCreateListener(
             var currentChunk = 0
 
             documentParseResult.forEachIndexed { index, it ->
-                val page = (it.metadata["page_number"]) as Int
+                val page = (it.metadata["page_number"] ?: -1) as Int
 
                 if (currentPage != page) {
                     currentPage = page

@@ -14,6 +14,7 @@ import org.springframework.ai.openai.OpenAiChatModel
 import org.springframework.ai.reader.ExtractedTextFormatter
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig
+import org.springframework.ai.reader.tika.TikaDocumentReader
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.stereotype.Component
 
@@ -35,7 +36,7 @@ class ParserService(
         val reader = when (document.type) {
             DocumentType.PDF_MULTI_COLUMN -> CustomPdfDocumentReader(url, config)
             DocumentType.PDF_SINGLE_COLUMN -> PagePdfDocumentReader(url, config)
-            else -> PagePdfDocumentReader(url, config)
+            else -> TikaDocumentReader(url)
         }
 
         return  reader.read()
