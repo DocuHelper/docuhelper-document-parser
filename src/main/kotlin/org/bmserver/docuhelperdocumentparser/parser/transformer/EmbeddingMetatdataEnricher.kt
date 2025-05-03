@@ -8,10 +8,19 @@ class EmbeddingMetatdataEnricher(
     private val aiService: AiService
 ) : DocumentTransformer {
     override fun apply(documents: MutableList<Document>): MutableList<Document> {
-        val documentEmbededDatas =
-            aiService.getEmbeddingValue(documents.map { it.text ?: "" }).embeddings.map { it.toList() }
+        val documentTexts = documents.map { doc ->
+            val exceptKeywords = doc.metadata["except_keywords"]?.toString().orEmpty()
+            val text = doc.text.orEmpty()
+            "$exceptKeywords\n$text"
+        }
+
+        val documentEmbeddedData = aiService
+            .getEmbeddingValue(documentTexts)
+            .embeddings
+            .map { it.toList() }
+
         return documents.mapIndexed { index, document ->
-            document.metadata["embed"] = documentEmbededDatas[index]
+            document.metadata["embed"] = documentEmbeddedData.getOrNull(index)
             document
         }.toMutableList()
     }

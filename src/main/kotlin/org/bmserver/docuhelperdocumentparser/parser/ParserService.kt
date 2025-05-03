@@ -7,6 +7,7 @@ import org.bmserver.docuhelperdocumentparser.core.model.DocumentType
 import org.bmserver.docuhelperdocumentparser.file.FileService
 import org.bmserver.docuhelperdocumentparser.parser.transformer.EmbeddingMetatdataEnricher
 import org.bmserver.documentparser.CustomPdfDocumentReader
+import org.springframework.ai.chat.transformer.KeywordMetadataEnricher
 import org.springframework.ai.chat.transformer.SummaryMetadataEnricher
 import org.springframework.ai.document.Document
 import org.springframework.ai.document.MetadataMode
@@ -17,6 +18,7 @@ import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig
 import org.springframework.ai.reader.tika.TikaDocumentReader
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.stereotype.Component
+
 
 private val logger = KotlinLogging.logger {  }
 
@@ -45,8 +47,8 @@ class ParserService(
                 splitDocument(it)
             }
             .let {
-                logger.info { "Start Split Document - ${document.name}" }
-                summaryDocument(it)
+                logger.info { "Start Summary Keyword Document - ${document.name}" }
+                summaryKeywordDocument(it)
             }
             .let {
                 logger.info { "Start Embedding Document - ${document.name}" }
@@ -58,6 +60,12 @@ class ParserService(
     private fun splitDocument(documents: List<Document>): List<Document> {
         val ts = TokenTextSplitter()
         return ts.split(documents)
+    }
+
+    private fun summaryKeywordDocument(documents: List<Document>): List<Document> {
+        val enricher = KeywordMetadataEnricher(chatModel, 5)
+        return enricher.apply(documents)
+
     }
 
     private fun summaryDocument(documents: List<Document>): List<Document> {
