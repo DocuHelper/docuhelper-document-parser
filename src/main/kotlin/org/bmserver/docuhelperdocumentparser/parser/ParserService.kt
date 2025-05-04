@@ -5,6 +5,7 @@ import org.bmserver.docuhelperdocumentparser.ai.AiService
 import org.bmserver.docuhelperdocumentparser.core.event.DocumentCreate
 import org.bmserver.docuhelperdocumentparser.core.model.DocumentType
 import org.bmserver.docuhelperdocumentparser.file.FileService
+import org.bmserver.docuhelperdocumentparser.parser.dto.DocumentParseResult
 import org.bmserver.docuhelperdocumentparser.parser.transformer.EmbeddingMetatdataEnricher
 import org.bmserver.documentparser.CustomPdfDocumentReader
 import org.springframework.ai.chat.transformer.KeywordMetadataEnricher
@@ -20,7 +21,7 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.stereotype.Component
 
 
-private val logger = KotlinLogging.logger {  }
+private val logger = KotlinLogging.logger { }
 
 @Component
 class ParserService(
@@ -29,7 +30,7 @@ class ParserService(
     private val aiService: AiService
 ) {
 
-    fun parseDocument(event: DocumentCreate) :List<Document> {
+    fun parseDocument(event: DocumentCreate): List<DocumentParseResult> {
         val document = event.document
         val config = getParserConfig()
 
@@ -41,7 +42,7 @@ class ParserService(
             else -> TikaDocumentReader(url)
         }
 
-        return  reader.read()
+        val parseResult = reader.read()
             .let {
                 logger.info { "Start Split Document - ${document.name}" }
                 splitDocument(it)
@@ -55,6 +56,31 @@ class ParserService(
                 embedDocument(it)
             }
 
+        return postProcessing(parseResult)
+
+    }
+
+    private fun postProcessing(documents: List<Document>): List<DocumentParseResult> {
+
+        var currentPage = 0
+        var currentChunk = 0
+
+        return documents.mapIndexed { index, it ->
+            val page = (it.metadata["page_number"] ?: -1) as Int
+
+            if (currentPage != page) {
+                currentPage = page
+                currentChunk = 1
+            }
+
+            DocumentParseResult(
+                content = it.text?.replace("\u0000", "") ?: "",
+                page = page,
+                embedding = it.metadata["embed"] as List<Float>,
+                keyword = it.metadata["except_keywords"] as? List<String> ?: emptyList(),
+                chunkNum = currentChunk
+            )
+        }
     }
 
     private fun splitDocument(documents: List<Document>): List<Document> {

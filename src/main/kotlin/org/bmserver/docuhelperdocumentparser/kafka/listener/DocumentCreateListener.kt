@@ -28,29 +28,18 @@ class DocumentCreateListener(
 
             logger.info { "Send Event Start - ${event.document.name}" }
 
-            var currentPage = 0
-            var currentChunk = 0
-
-            documentParseResult.forEachIndexed { index, it ->
-                val page = (it.metadata["page_number"] ?: -1) as Int
-
-                if (currentPage != page) {
-                    currentPage = page
-                    currentChunk = 1
-                }
-
+            documentParseResult.forEach { it ->
                 val parseEvent = DocumentParse(
                     documentUuid = document.uuid!!,
-                    page = page,
-                    content = it.text ?: "",
-                    embedContent = it.metadata["embed"] as List<Float>,
-                    chunkNum = currentChunk
+                    page = it.page,
+                    content = it.content,
+                    embedContent = it.embedding,
+                    chunkNum = it.chunkNum
                 )
 
                 eventPublisher.publish(parseEvent)
 
-                currentChunk++
-                logger.info { "Send Event - ${event.document.name} : Page ${currentPage} : Chunk ${currentChunk}" }
+                logger.info { "Send Event - ${event.document.name} : Page ${it.page} : Chunk ${it.chunkNum}" }
             }
 
             logger.info { "Send Complete Event - ${event.document.name}" }
