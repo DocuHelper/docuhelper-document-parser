@@ -15,8 +15,7 @@ class EmbeddingMetatdataEnricher(
         }
 
         val documentEmbeddedData = aiService
-            .getEmbeddingValue(documentTexts)
-            .embeddings
+            .getEmbeddingValueOfOpenAi(documentTexts)
             .map { it.toList() }
 
         return documents.mapIndexed { index, document ->
